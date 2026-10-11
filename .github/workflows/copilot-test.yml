@@ -14,4 +14,4 @@ jobs:
       - name: Say hello
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.AI_API_KEY }}
-        run: copilot -s --allow-all-tools --no-ask-user -p "Reply with exactly: Copilot works"
+        run: copilot -s --allow-all-tools --no-ask-user -p "Reply with exactly Copilot works"
