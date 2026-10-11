@@ -33,8 +33,36 @@ jobs:
           name: build-artifact
           path: build.zip
 
-  deploy-dev:
+  verify-build:
     needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+
+      - name: Setup Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Check build on Node ${{ matrix.node }}
+        run: |
+          node --version
+          unzip -q build.zip -d out
+          ls out/dist
+          node --check out/dist/index.js
+          echo "dist/index.js parses OK on Node ${{ matrix.node }}"
+
+  deploy-dev:
+    needs: [build, verify-build]
     runs-on: ubuntu-latest
     environment: dev
     permissions:
