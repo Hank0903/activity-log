@@ -129,11 +129,16 @@ jobs:
 
           jq -n --rawfile system system.txt --rawfile user user.txt '{model: "openai/gpt-4.1-mini", temperature: 0.2, messages: [{role: "system", content: $system}, {role: "user", content: $user}]}' > request.json
 
-          curl -sS --fail-with-body https://models.github.ai/inference/chat/completions \
+          jq -e . request.json > /dev/null && echo "request.json is valid JSON"
+
+          STATUS=$(curl -sS -o response.json -w "%{http_code}" https://models.github.ai/inference/chat/completions \
             -H "Authorization: Bearer $MODELS_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "Content-Type: application/json" \
-            -d @request.json > response.json
+            -d @request.json)
+          echo "HTTP status: $STATUS"
+          head -c 600 response.json; echo
+          [ "$STATUS" = "200" ] || exit 1
 
           jq -r '.choices[0].message.content' response.json > release-notes.md
           {
