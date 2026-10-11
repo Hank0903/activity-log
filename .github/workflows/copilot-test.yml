@@ -1,0 +1,16 @@
+name: Copilot Test
+on: workflow_dispatch
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+    steps:
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Say hello
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.AI_API_KEY }}
+        run: copilot -s --allow-all-tools --no-ask-user -p "Reply with exactly: Copilot works"
