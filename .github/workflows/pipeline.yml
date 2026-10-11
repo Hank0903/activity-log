@@ -59,3 +59,58 @@ jobs:
             --target "${{ github.sha }}" \
             --title "$TAG" \
             --notes "$NOTE"
+  deploy-staging:
+    needs: [build, deploy-dev]
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+
+      - name: Release Staging Build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PREFIX: ${{ vars.BUILD_TAG }}
+          NOTE: ${{ vars.RELEASE_NOTE }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          TAG="${PREFIX}-v${VERSION}"
+          gh release delete "$TAG" --cleanup-tag --yes || true
+          gh release create "$TAG" build.zip \
+            --target "${{ github.sha }}" \
+            --title "$TAG" \
+            --notes "$NOTE" \
+            --prerelease
+
+  deploy-production:
+    needs: [build, deploy-staging]
+    runs-on: ubuntu-latest
+    environment: production      # 這裡會停下來等 reviewer 核准
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+
+      - name: Release Production Build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PREFIX: ${{ vars.BUILD_TAG }}
+          NOTE: ${{ vars.RELEASE_NOTE }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          TAG="${PREFIX}-v${VERSION}"
+          gh release delete "$TAG" --cleanup-tag --yes || true
+          gh release create "$TAG" build.zip \
+            --target "${{ github.sha }}" \
+            --title "$TAG" \
+            --notes "$NOTE"
+            
