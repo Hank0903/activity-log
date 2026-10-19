@@ -80,5 +80,5 @@ jobs:
           gh release create "$TAG" build.zip \
             --target "${{ github.sha }}" \
             --title "$TAG" \
-            --notes "Automated release after successful tests"
+            --notes "Automated release after successful tests"\
             --latest=false
