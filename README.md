@@ -1,3 +1,5 @@
+[![A5 Build-Test-Deploy](https://github.com/Hank0903/activity-log/actions/workflows/test-pipeline.yml/badge.svg?branch=assignment5)](https://github.com/Hank0903/activity-log/actions/workflows/test-pipeline.yml)
+
 <h1 align="center" id="title">Activity Log</h1>
 
 ![activity log](https://socialify.git.ci/TheDanniCraft/activity-log/image?forks=1&issues=1&language=1&logo=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66677362&name=1&owner=1&pattern=Solid&pulls=1&stargazers=1&theme=Auto)
