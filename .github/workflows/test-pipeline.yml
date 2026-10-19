@@ -1,4 +1,4 @@
-name: A5 Build-Test-Release
+name: A5 Build-Test-Deploy
 
 on:
   push:
@@ -32,9 +32,30 @@ jobs:
           name: build-artifact
           path: build.zip
 
-  test:
+  test-unit:
     needs: build
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+  test-integration:
+    needs: test-unit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test_env: [staging, prod]
+    env:
+      TEST_ENV: ${{ matrix.test_env }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,13 +73,13 @@ jobs:
       - name: Restore built files over the checkout
         run: unzip -o build.zip
 
-      - name: Run automated tests
-        run: npm test
+      - name: Run integration tests
+        run: npm run test:integration
 
-  release:
-    needs: [build, test]
+  deploy-staging:
+    needs: [build, test-unit, test-integration]
     runs-on: ubuntu-latest
-    environment: dev
+    environment: staging
     permissions:
       contents: write
     steps:
@@ -67,18 +88,48 @@ jobs:
         with:
           name: build-artifact
 
-      - name: Release
+      - name: Release Staging Build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           PREFIX: ${{ vars.BUILD_TAG }}
+          NOTE: ${{ vars.RELEASE_NOTE }}
           VERSION: ${{ needs.build.outputs.version }}
           RUN: ${{ github.run_number }}
         run: |
           TAG="a5-${PREFIX}-v${VERSION}-r${RUN}"
-          echo "Tests passed. Releasing $TAG"
+          echo "Unit and integration tests passed. Releasing $TAG"
           gh release create "$TAG" build.zip \
             --target "${{ github.sha }}" \
             --title "$TAG" \
-            --notes "Automated release after successful tests" \
+            --notes "$NOTE. Released after unit and integration tests passed." \
+            --prerelease
+
+  deploy-production:
+    needs: [build, deploy-staging]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+
+      - name: Release Production Build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PREFIX: ${{ vars.BUILD_TAG }}
+          NOTE: ${{ vars.RELEASE_NOTE }}
+          VERSION: ${{ needs.build.outputs.version }}
+          RUN: ${{ github.run_number }}
+        run: |
+          TAG="a5-${PREFIX}-v${VERSION}-r${RUN}"
+          echo "Approved by reviewer. Releasing $TAG"
+          gh release create "$TAG" build.zip \
+            --target "${{ github.sha }}" \
+            --title "$TAG" \
+            --notes "$NOTE. Released after tests passed and manual approval." \
             --latest=false
