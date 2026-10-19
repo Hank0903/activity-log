@@ -35,17 +35,23 @@ jobs:
   test-unit:
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node ${{ matrix.node }}
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
 
       - name: Run unit tests
-        run: npm run test:unit
+        run: |
+          node --version
+          npm run test:unit
 
   test-integration:
     needs: test-unit
@@ -75,6 +81,37 @@ jobs:
 
       - name: Run integration tests
         run: npm run test:integration
+
+  report-failure:
+    needs: [build, test-unit, test-integration]
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open an issue for the failed run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          UNIT_RESULT: ${{ needs.test-unit.result }}
+          INTEGRATION_RESULT: ${{ needs.test-integration.result }}
+        run: |
+          {
+            echo "The pipeline failed before any release was created."
+            echo ""
+            echo "- Branch: $BRANCH"
+            echo "- Commit: $SHA"
+            echo "- Build: $BUILD_RESULT"
+            echo "- Unit tests: $UNIT_RESULT"
+            echo "- Integration tests: $INTEGRATION_RESULT"
+            echo "- Run: $RUN_URL"
+          } > issue.md
+          gh issue create --title "Pipeline failure on $BRANCH (run #$RUN_NUMBER)" --body-file issue.md
 
   deploy-staging:
     needs: [build, test-unit, test-integration]
