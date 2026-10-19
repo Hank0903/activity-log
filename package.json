@@ -12,7 +12,10 @@
 	"scripts": {
 		"watch": "ncc build src/index.js --watch --license licenses.txt",
 		"build": "bun install && bunx ncc build src/index.js --license licenses.txt",
-		"lint:commit": "commitlint --last --verbose"
+		"lint:commit": "commitlint --last --verbose",
+		"test:unit": "node --test test/unit.test.mjs",
+		"test:integration": "node --test test/integration.test.mjs",
+		"test": "node --test test/unit.test.mjs test/integration.test.mjs"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^21.2.3",
