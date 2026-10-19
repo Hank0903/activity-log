@@ -81,3 +81,4 @@ jobs:
             --target "${{ github.sha }}" \
             --title "$TAG" \
             --notes "Automated release after successful tests"
+            --latest=false
