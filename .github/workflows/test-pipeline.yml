@@ -1,0 +1,83 @@
+name: A5 Build-Test-Release
+
+on:
+  push:
+    branches: [ assignment5 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version from package.json
+        id: ver
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Build
+        run: |
+          bun install
+          bun run build
+          zip -r build.zip dist action.yml package.json
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: build.zip
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+
+      - name: Restore built files over the checkout
+        run: unzip -o build.zip
+
+      - name: Run automated tests
+        run: npm test
+
+  release:
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PREFIX: ${{ vars.BUILD_TAG }}
+          VERSION: ${{ needs.build.outputs.version }}
+          RUN: ${{ github.run_number }}
+        run: |
+          TAG="a5-${PREFIX}-v${VERSION}-r${RUN}"
+          echo "Tests passed. Releasing $TAG"
+          gh release create "$TAG" build.zip \
+            --target "${{ github.sha }}" \
+            --title "$TAG" \
+            --notes "Automated release after successful tests"
