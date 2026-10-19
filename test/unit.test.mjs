@@ -9,6 +9,6 @@ test('package.json has a valid semantic version', () => {
 
 test('action.yml declares the required inputs', () => {
   const text = readFileSync('action.yml', 'utf8');
-  assert.ok(text.includes('GITHUB_USERNAME'));
+  assert.ok(text.includes('NOT_A_REAL_INPUT'));
   assert.ok(text.includes('GITHUB_TOKEN'));
 });
